@@ -27,6 +27,9 @@
 
 #define MAX_INSTS 9000000000 // 5 billion (max number of insts run)
 
+#define START 0x4004b6
+#define END 0x4004d3
+
 std::ofstream OutFile;
 
 static UINT32         _lockAnalysis = !LOCKED; /* unlock -> without sym */
@@ -36,6 +39,9 @@ UINT64 min = 0x700000000;
 UINT64 max = 0;
 UINT64 num_inst = 0;
 bool overflow = false;
+
+static INS insArr [MAX_ADDR];
+
 
 INT32 Usage()
 {
@@ -74,11 +80,17 @@ VOID insCallBack(UINT64 insAddr, std::string insDis)
 
 VOID Instruction(INS ins, VOID *v)
 {
-  INS_InsertCall(
+  UINT64 insAddr = INS_Address(ins);
+  if(insAddr >= START && insAddr <= END) {
+      INS_InsertCall(
       ins, IPOINT_BEFORE, (AFUNPTR)insCallBack,
-      IARG_ADDRINT, INS_Address(ins),
+      IARG_ADDRINT, insAddr,
       IARG_PTR, new std::string(INS_Disassemble(ins)),
       IARG_END);
+     
+      std::cout << std::string(INS_Disassemble(ins)) << std::endl;
+      insArr[insAddr ^ 0x400000] = ins;
+  }
 }
 
 VOID unlockAnalysis(void)
@@ -115,10 +127,10 @@ VOID Fini(INT32 code, VOID *v)
       MAX_ADDR_TYPE start;
       MAX_COUNT_TYPE iter;
       MAX_COUNT_TYPE count;
-      MAX_COUNT_TYPE totalIns = 0;
-      MAX_COUNT_TYPE totolLoads = 0;
-      MAX_COUNT_TYPE totalCalls = 0;
-      MAX_COUNT_TYPE totalArithmeticIns = 0;
+      UINT64 totalIns = 0;
+      UINT64 totalLoads = 0;
+      UINT64 totalCalls = 0;
+      UINT64 totalArithmeticIns = 0;
   };
 
   std::cout << "\nStats from Pin:" << std::endl;
@@ -127,14 +139,19 @@ VOID Fini(INT32 code, VOID *v)
   UINT64 total_loops_dynamic = 0;
   UINT32 base_pc = 0x400000;
 
-  MAX_COUNT_TYPE totalIns = 0;
-  MAX_COUNT_TYPE totolLoads = 0;
-  MAX_COUNT_TYPE totalCalls = 0;
+  UINT64 totalIns = 0;
+  UINT64 totalLoads = 0;
+  UINT64 totalCalls = 0;
 
 
   std::stack<LoopStream> loops; //start, iter, count
   for (MAX_ADDR_TYPE i = 0; i < MAX_ADDR; i++){
     if (_tabAddr[i]) {
+      std::cout << " " << std::endl;
+      std::cout << _tabAddr[i] << std::endl;
+      std::cout << _tabStr[i] << std::endl;
+      //std::cout << std::string(INS_Disassemble(insArr[i])) << std::endl;
+	
       MAX_COUNT_TYPE cur_loop_iter = 1;
       if (!loops.empty()){
         cur_loop_iter = loops.top().count;
@@ -158,12 +175,17 @@ VOID Fini(INT32 code, VOID *v)
           }
 	  //Before I pop, need to add all the instructions counted in the inner loop to the outer loop too so would save those values here
 	  loops.top().totalIns++;
-	  loops.top().totalLoads++;
-	  loops.top().totalCalls++;
+	 
+	  if(INS_IsMemoryRead(insArr[i])) {loops.top().totalLoads++;}
+          if(INS_IsCall(insArr[i])) {loops.top().totalCalls++;}
 	  
 	  totalIns += loops.top().totalIns;
 	  totalLoads += loops.top().totalLoads;
 	  totalCalls += loops.top().totalCalls;
+
+	  //std::cout << "Total Instuctions: "  << totalIns << std::endl;
+          //std::cout << "Total Loads: "  << totalLoads << std::endl;
+          //std::cout << "Total Calls: "  << totalCalls << std::endl;
 
           loops.pop();
    //       std::cout << "End loop:\tpc=" << std::hex << base_pc  + prev_pc << std::endl;
@@ -180,18 +202,25 @@ VOID Fini(INT32 code, VOID *v)
 	 totalCalls = 0;
 
 	 loops.top().totalIns++;
-     	 if(INS_IsMemoryRead(_tabStr[i])) {loops.top().totalLoads++};
-     	 if(INS_IsCall(_tabStr[i])) {loops.top().totalCalls++};
+     	 if(INS_IsMemoryRead(insArr[i])) {loops.top().totalLoads++;}
+     	 if(INS_IsCall(insArr[i])) {loops.top().totalCalls++;}
+         
+         /*std::cout << std::string(INS_Disassemble(insArr[i])) << std::endl;
+         std::cout << "Total Instuctions: "  << loops.top().totalIns << std::endl;
+         std::cout << "Total Loads: "  << loops.top().totalLoads << std::endl;
+         std::cout << "Total Calls: "  << loops.top().totalCalls << std::endl;
+         std::cout << " " << std::endl;*/
+ 
       }
       prev_pc = i;
     }
   }
-  std::cout << "Count ovewrflow? " << std::dec << overflow << std::endl;
+ /* std::cout << "Count ovewrflow? " << std::dec << overflow << std::endl;
   std::cout << "Static count = " << std::dec << total_loops << std::endl;
   std::cout << "Dynamic count = " << std::dec << total_loops_dynamic << std::endl;
   std::cout << "Min addr = 0x" << std::hex << min << std::endl;
   std::cout << "Max addr = 0x" << std::hex << max << " (Forced max 0x" << std::hex << base_pc + MAX_ADDR << ")" << std::endl;
-  std::cout << "Total num inst = " << std::dec << num_inst << " (Stopped after " << std::dec << MAX_INSTS << ")" << std::endl;
+  std::cout << "Total num inst = " << std::dec << num_inst << " (Stopped after " << std::dec << MAX_INSTS << ")" << std::endl;*/
 }
 
 int main(int argc, char *argv[])
