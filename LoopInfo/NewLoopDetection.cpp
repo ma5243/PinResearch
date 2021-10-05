@@ -27,6 +27,15 @@ VOID processDbbl(UINT64 startAddr, UINT64 endAddr, BBL *dbbl)
         bbls[endAddr] = startAddr;
     } else if (bbls[endAddr] > startAddr) {
         // Split dbbls
+        UINT64 prev; //Maybe the type should be ADDRINT
+        for(INS ins = BBL_InsHead(dbbl); INS_Valid(ins); ins=INS_Next(ins)) {
+		if(INS_Address(ins) == bbls[endAddr]) {
+			break;
+		}
+		prev = INS_Address(ins); 
+	}
+	bbls[prev] = startAddr;
+	processBbl(startAddr,prev,dbbl);
         // prev = address of ins just before bbls[endAddr]
         // bbls[prev] = startAddr
         // processBbl(startAdr, prev);
