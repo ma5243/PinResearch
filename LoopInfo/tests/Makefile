@@ -8,7 +8,7 @@
 
 CC = gcc
 CFLAGS  = -g -Wall
-TARGETS = simple simple2 simple_nested triple_nested oscillate conditional_oscillate simple_function_call simple_function_call2 conditional_break conditional_function_call conditional_function_call2
+TARGETS = simple simple2 simple_nested triple_nested oscillate conditional_oscillate simple_function_call simple_function_call2 conditional_break conditional_function_call conditional_function_call2 nested_conditional_cont
 
 all: $(TARGETS)
 
