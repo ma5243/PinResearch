@@ -7,7 +7,7 @@
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("Usage: ./simple <count>\n");
+        printf("Usage: ./conditional_oscillate <count> <bool: check> \n");
         return 1;
     }
 

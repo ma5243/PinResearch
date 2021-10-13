@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        printf("Usage: ./simple <count>\n");
+        printf("Usage: ./oscillate <count> \n");
         return 1;
     }
 

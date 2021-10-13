@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("Usage: ./simple <count>\n");
+        printf("Usage: ./simple_nested <count1> <count2> \n");
         return 1;
     }
 
