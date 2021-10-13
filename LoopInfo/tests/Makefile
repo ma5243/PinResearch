@@ -28,7 +28,7 @@ all: $(TARGETS)
 	$(CC) $(CFLAGS) -DLOOP_TYPE=3 -O1 $< -o $@/$@_do_O1; \
 	$(CC) $(CFLAGS) -DLOOP_TYPE=3 -O2 $< -o $@/$@_do_O2; \
 	$(CC) $(CFLAGS) -DLOOP_TYPE=3 -O3 $< -o $@/$@_do_O3; \
-	echo "for i in $@_*; do echo -ne \"\$$i:\\t\"; ./\$$i \$$1; done" > $@/run_all.sh; \
+	echo "for i in $@_*; do echo -ne \"\$$i:\\t\"; ./\$$i \$$@; done" > $@/run_all.sh; \
 	chmod +x $@/run_all.sh
 
 clean: 

@@ -20,6 +20,7 @@ int main(int argc, char *argv[]) {
         if(i % 2 == 0 && check) {
           break;
         }
+        x += i;
     )
 
     printf("%d\n",x);
