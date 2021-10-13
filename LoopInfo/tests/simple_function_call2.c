@@ -16,7 +16,7 @@ int foo(int i) {
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        printf("Usage: ./simple_function_call <count>\n");
+        printf("Usage: ./simple_function_call2 <count>\n");
         return 1;
     }
 
