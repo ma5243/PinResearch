@@ -12,32 +12,35 @@ int mem_instr = 0;
 int control_flow_instr = 0;
 
 bool isLoop = false;
-
+bool isLoopTail = false;
 //This method will keep track of all these instructions throughout and everytime a loop is detected
 //it will attach these statistic to the loop, and then reset the values. 
 void doInstructionAccouting(INS ins) {
-	if(isLoop) {
+	if(isLoopTail) {
 		//attach the arithmetic_instr, mem_instr, control_flow_instr to the loop 
 		//depends on how the loop is being "stored" so can't implement rn
 		//reset the values to 0 and break 
 		arithmetic_instr = 0;
 		mem_instr = 0;
 		control_flow_instr = 0;
-		isLoop = false;
+		isLoopTail = false;
 		return;
 	}
-	if(INS_IsMemoryRead(ins) || INS_IsLea(ins)) {
-		mem_instr++;
-	} else if(INS_IsCall(ins) || INS_IsBranch(ins)) {
-		control_flow_instr++;
-	} else if(INS_Opcode(ins) == XED_ICLASS_ADD || INS_Opcode(ins) == XED_ICLASS_SUB || INS_Opcode(ins) == XED_ICLASS_AND || INS_Opcode(ins) == XED_ICLASS_IMUL ||
-                  INS_Opcode(ins) == XED_ICLASS_IDIV || INS_Opcode(ins) == XED_ICLASS_OR || INS_Opcode(ins) == XED_ICLASS_XOR || INS_Opcode(ins) == XED_ICLASS_SHL || INS_Opcode(ins) == XED_ICLASS_SHR 
-                  || INS_Opcode(ins) == XED_ICLASS_NOT || INS_Opcode(ins) == XED_ICLASS_NEG || INS_Opcode(ins) == XED_ICLASS_INC || INS_Opcode(ins) == XED_ICLASS_DEC)  {
-		arithmetic_instr++;
-	} /*else if(INS_Opcode(ins) == XED_ICLASS_SUB) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_AND) {                                     
-                arithmetic_instr++;
+	if(isLoop && !isLoopTail) {
+		if(INS_IsMemoryRead(ins) || INS_IsLea(ins)) {
+			mem_instr++;
+		} else if(INS_IsCall(ins) || INS_IsBranch(ins)) {
+			control_flow_instr++;
+		} else if(INS_Opcode(ins) == XED_ICLASS_ADD || INS_Opcode(ins) == XED_ICLASS_SUB || INS_Opcode(ins) == XED_ICLASS_AND || INS_Opcode(ins) == XED_ICLASS_IMUL ||
+        	          INS_Opcode(ins) == XED_ICLASS_IDIV || INS_Opcode(ins) == XED_ICLASS_OR || INS_Opcode(ins) == XED_ICLASS_XOR || INS_Opcode(ins) == XED_ICLASS_SHL || INS_Opcode(ins) == XED_ICLASS_SHR 
+        	          || INS_Opcode(ins) == XED_ICLASS_NOT || INS_Opcode(ins) == XED_ICLASS_NEG || INS_Opcode(ins) == XED_ICLASS_INC || INS_Opcode(ins) == XED_ICLASS_DEC)  {
+			arithmetic_instr++;
+		}
+	}
+	 /*else if(INS_Opcode(ins) == XED_ICLASS_SUB) {                                     
+               	 	arithmetic_instr++;
+        	} else if(INS_Opcode(ins) == XED_ICLASS_AND) {                                     
+                	arithmetic_instr++;
         } else if(INS_Opcode(ins) == XED_ICLASS_IMUL) {                                     
                 arithmetic_instr++;
         } else if(INS_Opcode(ins) == XED_ICLASS_IDIV) {                                     
