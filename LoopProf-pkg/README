@@ -1,0 +1,47 @@
+README file for the LoopProf Pintool
+Tipp Moseley
+tipp.j.moseley@intel.com
+tipp.moseley@gmail.com
+--
+
+Quick start guide
+--
+
+ 0. Download and extract the Pin package
+
+ 1. Set the environment variable PIN_HOME=<wherever Pin is>
+
+ 3. tar xzf LoopProf-pkg.tar.gz
+
+ 4. cd LoopProf-pkg
+
+ 5. Set the environment variable LOOPPROF_HOME to the LoopProf-pkg directory
+
+ 6. In the LoopProf-pkg directory, type 'make'
+
+ 7. To run the tool on an application, try:
+      $ $PIN_HOME/Bin/pin -mt -t Source/loopprof -- Tests/threads
+    Notice that the directory threads.loopprof has been created.
+
+ 8. Run the analysis script on the output:
+      $ ./Scripts/looptool.py threads.loopprof
+
+ 9. Now a flat profile and loop-call graph has been generated for each thread
+    (and for the overall execution) in the threads.loopprof directory.
+
+10. Have a look at the threads.loopprof/*.loops files.  Try opening any of
+    threads.loopprof/*.gr in the iDVC viewer.
+
+Options for loopprof pin tool:
+--
+  -pid append the thread's pid to all output (default: 0)
+
+  -shared-libs fully profile shared libraries (default: 0)
+
+Options for looptool.py:
+--
+  -t,--threadhold= filter loops and functions below this percentage of
+                   execution (default: 0)
+
+  -s,--sortby=[addr|self|total] sort functions and loops in the flat profile
+                                by address, self, or total instructions

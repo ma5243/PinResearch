@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="179"
+   name=""
+   committed-date="2006-12-09T02:52:07.903101Z"
+   url="https://systems.cs.colorado.edu/svn/moseleyt/trunk/proj/LoopProf/LoopProf-pkg/Tests"
+   last-author="moseleyt"
+   kind="dir"
+   uuid="e8c22c27-7a17-0410-84d7-ec7e5ea8d8c0"
+   revision="179"/>
+</wc-entries>
