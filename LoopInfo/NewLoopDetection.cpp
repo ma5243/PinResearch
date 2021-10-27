@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include "pin.H"
 #include <unordered_map>
 
@@ -7,6 +8,8 @@ std::ofstream OutFile;
 
 // Map from endAddr to startaddr
 std::unordered_map<UINT64, UINT64> bbls;
+std::vector<UINT64> stack;
+std::unordered_map<UINT64, UINT64> loops;
 int arithmetic_instr = 0;
 int mem_instr = 0;
 int control_flow_instr = 0;
@@ -72,7 +75,20 @@ INT32 Usage()
 
 VOID processBbl(UINT64 startAddr, UINT64 endAddr, BBL *bbl)
 {
-    OutFile << startAddr << " " << endAddr << std::endl;
+    if (std::find(stack.begin(), stack.end(), endAddr) == stack.end()) {
+        stack.push_back(endAddr);
+    } else {
+        while(stack.back() != endAddr){
+            stack.pop_back();
+        }
+        if (loops.find(endAddr) == loops.end()){
+            loops[endAddr] = 1;
+        } else { 
+            loops[endAddr] ++;
+        }
+    }
+        
+//    OutFile << startAddr << " " << endAddr << std::endl;
 }
 
 VOID processDbbl(UINT64 startAddr, UINT64 endAddr, BBL *dbbl)
@@ -84,7 +100,7 @@ VOID processDbbl(UINT64 startAddr, UINT64 endAddr, BBL *dbbl)
     } else if (bbls[endAddr] > startAddr) {
         // Split dbbls
         //UINT64 prev; //Maybe the type should be ADDRINT
-        /*for(INS ins = */std::cout << INS_Address(BBL_InsHead(*dbbl)) << std::endl;//; ins != BBL_InsTail(*dbbl); ins=INS_Next(ins)) {
+        //for(INS ins = std::cout << INS_Address(BBL_InsHead(*dbbl)) << std::endl;//; ins != BBL_InsTail(*dbbl); ins=INS_Next(ins)) {
 		//    if(INS_Address(ins) == bbls[endAddr]) {
 		//	    break;
 		//    }
@@ -120,7 +136,7 @@ KNOB<std::string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
 {
-	
+    OutFile << "Total number of Loops:" << loops.size() << std::endl;
 }
 
 
