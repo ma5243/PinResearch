@@ -3,16 +3,23 @@
 #include <algorithm>
 #include "pin.H"
 #include <unordered_map>
+#include <stack>
 
 std::ofstream OutFile;
 
 // Map from endAddr to startaddr
 std::unordered_map<UINT64, UINT64> bbls;
+
 std::vector<UINT64> stack;
 std::unordered_map<UINT64, UINT64> loops;
+
+std::stack<BBL> basicBlocks;
+
 int arithmetic_instr = 0;
 int mem_instr = 0;
 int control_flow_instr = 0;
+
+
 
 bool isLoop = false;
 bool isLoopTail = false;
@@ -126,6 +133,20 @@ VOID Trace(TRACE trace, VOID *v)
     {
         // Insert a call to docount before every bbl, passing the number of instructions
         BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)processDbbl, IARG_ADDRINT, INS_Address(BBL_InsHead(bbl)), IARG_ADDRINT, INS_Address(BBL_InsTail(bbl)), IARG_PTR, &bbl, IARG_END);
+
+	if(basicBlocks.top() == bbl) {
+		isLoop = true;
+		loops[BBL_InsTail(bbl)] = BBL_InsHead(bbl); 
+		for(INS ins = BBL_InsHead(bbl); true; ins=INS_Next(ins)) {
+			if(ins == BBL_InsTail(bbl)) {
+				isLoopTail = true;
+			}
+			doInstructionAccounting(ins);
+		}
+		basicBlocks.pop();		
+	} else {
+		basicBlocks.push(bbl);
+	}
     }
 }
 
