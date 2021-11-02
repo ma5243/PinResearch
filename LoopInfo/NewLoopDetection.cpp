@@ -15,38 +15,30 @@ std::unordered_map<UINT64, UINT64> loops;
 
 std::stack<BBL> basicBlocks;
 
+
 int arithmetic_instr = 0;
 int mem_instr = 0;
 int control_flow_instr = 0;
 
-
-
-bool isLoop = false;
-bool isLoopTail = false;
 //This method will keep track of all these instructions throughout and everytime a loop is detected
 //it will attach these statistic to the loop, and then reset the values. 
-void doInstructionAccouting(INS ins) {
+void doInstructionAccouting(INS ins, bool isLoopTail) {
+	if(INS_IsMemoryRead(ins) || INS_IsLea(ins)) {
+			mem_instr++;
+	} else if(INS_IsCall(ins) || INS_IsBranch(ins)) {
+			control_flow_instr++;
+	} else if(INS_Opcode(ins) == XED_ICLASS_ADD || INS_Opcode(ins) == XED_ICLASS_SUB || INS_Opcode(ins) == XED_ICLASS_AND || INS_Opcode(ins) == XED_ICLASS_IMUL || INS_Opcode(ins) == XED_ICLASS_IDIV || INS_Opcode(ins) == XED_ICLASS_OR || INS_Opcode(ins) == XED_ICLASS_XOR || INS_Opcode(ins) == XED_ICLASS_SHL || INS_Opcode(ins) == XED_ICLASS_SHR || INS_Opcode(ins) == XED_ICLASS_NOT || INS_Opcode(ins) == XED_ICLASS_NEG || INS_Opcode(ins) == XED_ICLASS_INC || INS_Opcode(ins) == XED_ICLASS_DEC)  {
+			arithmetic_instr++;
+	}	
 	if(isLoopTail) {
 		//attach the arithmetic_instr, mem_instr, control_flow_instr to the loop 
 		//depends on how the loop is being "stored" so can't implement rn
-		//reset the values to 0 and break 
+		//reset the values to 0 
 		arithmetic_instr = 0;
 		mem_instr = 0;
 		control_flow_instr = 0;
-		isLoopTail = false;
-		return;
 	}
-	if(isLoop && !isLoopTail) {
-		if(INS_IsMemoryRead(ins) || INS_IsLea(ins)) {
-			mem_instr++;
-		} else if(INS_IsCall(ins) || INS_IsBranch(ins)) {
-			control_flow_instr++;
-		} else if(INS_Opcode(ins) == XED_ICLASS_ADD || INS_Opcode(ins) == XED_ICLASS_SUB || INS_Opcode(ins) == XED_ICLASS_AND || INS_Opcode(ins) == XED_ICLASS_IMUL ||
-        	          INS_Opcode(ins) == XED_ICLASS_IDIV || INS_Opcode(ins) == XED_ICLASS_OR || INS_Opcode(ins) == XED_ICLASS_XOR || INS_Opcode(ins) == XED_ICLASS_SHL || INS_Opcode(ins) == XED_ICLASS_SHR 
-        	          || INS_Opcode(ins) == XED_ICLASS_NOT || INS_Opcode(ins) == XED_ICLASS_NEG || INS_Opcode(ins) == XED_ICLASS_INC || INS_Opcode(ins) == XED_ICLASS_DEC)  {
-			arithmetic_instr++;
-		}
-	}
+
 	 /*else if(INS_Opcode(ins) == XED_ICLASS_SUB) {                                     
                	 	arithmetic_instr++;
         	} else if(INS_Opcode(ins) == XED_ICLASS_AND) {                                     
@@ -135,16 +127,21 @@ VOID Trace(TRACE trace, VOID *v)
         BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)processDbbl, IARG_ADDRINT, INS_Address(BBL_InsHead(bbl)), IARG_ADDRINT, INS_Address(BBL_InsTail(bbl)), IARG_PTR, &bbl, IARG_END);
 
 	if(basicBlocks.top() == bbl) {
-		isLoop = true;
-		loops[BBL_InsTail(bbl)] = BBL_InsHead(bbl); 
+		//add to the loops map
+		loops[BBL_InsTail(bbl)] = BBL_InsHead(bbl);
+		
+		//do instruction accounting 
 		for(INS ins = BBL_InsHead(bbl); true; ins=INS_Next(ins)) {
 			if(ins == BBL_InsTail(bbl)) {
-				isLoopTail = true;
+				doInstructionAccounting(ins, true);
+				break;
 			}
-			doInstructionAccounting(ins);
+			doInstructionAccounting(ins,false);
 		}
+		//remove the basic block
 		basicBlocks.pop();		
 	} else {
+		//if basic block not on top, just add it to the stack
 		basicBlocks.push(bbl);
 	}
     }
