@@ -5,6 +5,10 @@
 #include <unordered_map>
 #include <stack>
 
+
+#define START 0x4005a6
+#define END 0x40062f
+
 std::ofstream OutFile;
 
 // Map from endAddr to startaddr
@@ -13,13 +17,14 @@ std::unordered_map<UINT64, UINT64> bbls;
 std::vector<UINT64> stack;
 std::unordered_map<UINT64, UINT64> loops;
 
-std::stack<BBL> basicBlocks;
+//std::stack<BBL> basicBlocks;
 
 
 int arithmetic_instr = 0;
 int mem_instr = 0;
 int control_flow_instr = 0;
 
+int loopCounter = 0;
 //This method will keep track of all these instructions throughout and everytime a loop is detected
 //it will attach these statistic to the loop, and then reset the values. 
 void doInstructionAccouting(INS ins, bool isLoopTail) {
@@ -38,38 +43,20 @@ void doInstructionAccouting(INS ins, bool isLoopTail) {
 		mem_instr = 0;
 		control_flow_instr = 0;
 	}
-
-	 /*else if(INS_Opcode(ins) == XED_ICLASS_SUB) {                                     
-               	 	arithmetic_instr++;
-        	} else if(INS_Opcode(ins) == XED_ICLASS_AND) {                                     
-                	arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_IMUL) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_IDIV) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_OR) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_XOR) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_SHL) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_SHR) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_NOT) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_NEG) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_INC) {                                     
-                arithmetic_instr++;
-        } else if(INS_Opcode(ins) == XED_ICLASS_DEC) {                                     
-                arithmetic_instr++;
-        }*/
 }
 
 INT32 Usage()
 {
     std::cerr << "Usage: Not Implemented" << std::endl;
     return -1;
+}
+
+VOID loopDetection(UINT64 tailAddr) {
+	if(std::find(stack.begin(),stack.end(),tailAddr) != stack.end()) {
+		std::cout << "Loop" << std::endl;
+	} else {
+		stack.push_back(tailAddr);
+	}
 }
 
 VOID processBbl(UINT64 startAddr, UINT64 endAddr, BBL *bbl)
@@ -123,12 +110,17 @@ VOID Trace(TRACE trace, VOID *v)
     // Visit every basic block  in the trace
     for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
     {
-        // Insert a call to docount before every bbl, passing the number of instructions
-        BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)processDbbl, IARG_ADDRINT, INS_Address(BBL_InsHead(bbl)), IARG_ADDRINT, INS_Address(BBL_InsTail(bbl)), IARG_PTR, &bbl, IARG_END);
+        
+	if(INS_Address(BBL_InsHead(bbl)) >= START && INS_Address(BBL_InsTail(bbl)) <= END) {
+		// Insert a call to docount before every bbl, passing the tail address
+        	BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)loopDetection, IARG_ADDRINT, INS_Address(BBL_InsTail(bbl)),IARG_END);
+	}
+	
+	
 
-	if(basicBlocks.top() == bbl) {
+	/*if(basicBlocks.top() == bbl) {
 		//add to the loops map
-		loops[BBL_InsTail(bbl)] = BBL_InsHead(bbl);
+	
 		
 		//do instruction accounting 
 		for(INS ins = BBL_InsHead(bbl); true; ins=INS_Next(ins)) {
@@ -143,7 +135,7 @@ VOID Trace(TRACE trace, VOID *v)
 	} else {
 		//if basic block not on top, just add it to the stack
 		basicBlocks.push(bbl);
-	}
+	}*/
     }
 }
 
@@ -154,7 +146,7 @@ KNOB<std::string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
 {
-    OutFile << "Total number of Loops:" << loops.size() << std::endl;
+    OutFile << "Total number of Loops:" << loopCounter << std::endl;
 }
 
 
