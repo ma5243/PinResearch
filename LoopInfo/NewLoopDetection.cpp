@@ -6,16 +6,35 @@
 #include <stack>
 
 
+//#define START 0x4005a6
+//#define END 0x40062f
+
 #define START 0x4005a6
 #define END 0x40062f
 
 std::ofstream OutFile;
+
+class LoopStream {
+    public:
+      std::vector<UINT32> entryIterList;
+      //entryIterList.assign(10,0);
+      UINT64 tailAddr;
+      UINT64 prevAddr=0;
+    
+      //UINT64 totalIns = 0;
+      //UINT64 totalLoads = 0;
+      //UINT64 totalCalls = 0;
+      //UINT64 totalArithmeticIns = 0;
+};
 
 // Map from endAddr to startaddr
 std::unordered_map<UINT64, UINT64> bbls;
 
 std::vector<UINT64> stack;
 std::unordered_map<UINT64, UINT64> loops;
+
+
+std::vector<LoopStream> loopList;
 
 //std::stack<BBL> basicBlocks;
 
@@ -25,6 +44,8 @@ int mem_instr = 0;
 int control_flow_instr = 0;
 
 int loopCounter = 0;
+
+
 //This method will keep track of all these instructions throughout and everytime a loop is detected
 //it will attach these statistic to the loop, and then reset the values. 
 void doInstructionAccouting(INS ins, bool isLoopTail) {
@@ -53,7 +74,30 @@ INT32 Usage()
 
 VOID loopDetection(UINT64 tailAddr) {
 	if(std::find(stack.begin(),stack.end(),tailAddr) != stack.end()) {
-		std::cout << "Loop" << std::endl;
+		bool foundLoopAlready = false;
+		//std::cout << tailAddr << std::endl;
+		for(UINT32 i=0;i<loopList.size();i++) {
+			//std::cout << "test1" << std::endl;
+			if(loopList.at(i).tailAddr == tailAddr) {
+				foundLoopAlready = true;
+				if(loopList.at(i).prevAddr == stack.at(stack.size() - 1)) {
+					loopList.at(i).entryIterList[loopList.at(i).entryIterList.size()-1]++;//last entry should have an iter increase
+                                        //std::cout << loopList.at(i).entryIterList.at(loopList.at(i).entryIterList.size()-1) << std::endl;
+				} else {
+					loopList.at(i).entryIterList[loopList.at(i).entryIterList.size()]++;
+				}
+			}		
+		}
+		if(!foundLoopAlready) {
+			LoopStream elem;
+			elem.tailAddr = tailAddr;
+			elem.entryIterList.reserve(10);
+			elem.entryIterList.push_back(0);
+			elem.entryIterList.push_back(1);
+                        //std::cout << elem.entryIterList.at(1) << std::endl;
+			elem.prevAddr = stack.at(stack.size()-1);
+			loopList.push_back(elem);
+		}
 	} else {
 		stack.push_back(tailAddr);
 	}
@@ -146,7 +190,9 @@ KNOB<std::string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
 {
-    OutFile << "Total number of Loops:" << loopCounter << std::endl;
+    OutFile << "Total number of Loops:" << loopList.size() << std::endl;
+    OutFile << "Total number of entires in 1st loop: " << loopList.at(0).entryIterList.size()-1 << std::endl;
+    OutFile << "Total number of iterations in first loop: " <<  loopList.at(0).entryIterList.at(1) << std::endl;
 }
 
 
