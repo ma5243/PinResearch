@@ -43,7 +43,7 @@ bool inLoop = false;
 
 std::vector<LoopStream> loopList;
 
-UINT32 curLoopIter = 0;
+UINT64 curLoopIter = 0;
 
 //std::stack<BBL> basicBlocks;
 
