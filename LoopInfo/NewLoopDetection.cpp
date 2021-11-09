@@ -10,16 +10,21 @@
 //#define END 0x40062f
 
 #define START 0x4005a6
-#define END 0x40062f
+#define END 0x40069f
 
 std::ofstream OutFile;
 
 class LoopStream {
     public:
       std::vector<UINT32> entryIterList;
+      //std::vector<std::vector<UINT64>> iterBblList;
       //entryIterList.assign(10,0);
+      UINT64 iter = 0;      
       UINT64 tailAddr;
       UINT64 prevAddr=0;
+      UINT64 entries=0;
+      
+      
     
       //UINT64 totalIns = 0;
       //UINT64 totalLoads = 0;
@@ -33,8 +38,12 @@ std::unordered_map<UINT64, UINT64> bbls;
 std::vector<UINT64> stack;
 std::unordered_map<UINT64, UINT64> loops;
 
+std::vector<UINT64> validBbls;
+bool inLoop = false;
 
 std::vector<LoopStream> loopList;
+
+UINT32 curLoopIter = 0;
 
 //std::stack<BBL> basicBlocks;
 
@@ -43,7 +52,6 @@ int arithmetic_instr = 0;
 int mem_instr = 0;
 int control_flow_instr = 0;
 
-int loopCounter = 0;
 
 
 //This method will keep track of all these instructions throughout and everytime a loop is detected
@@ -73,7 +81,47 @@ INT32 Usage()
 }
 
 VOID loopDetection(UINT64 tailAddr) {
-	if(std::find(stack.begin(),stack.end(),tailAddr) != stack.end()) {
+	//std::cout << tailAddr << std::endl;
+	std::vector<UINT64>::iterator itr = std::find(stack.begin(), stack.end(), tailAddr);
+	if(itr != stack.end()) { //if already on the stack 
+		if(inLoop) {
+			curLoopIter++;
+			/*for(UINT32 i=0;i<loopList.size();i++) {
+				if(loopList.at(i).tailAddr == tailAddr) {
+					loopList.at(i).iter++;
+					//std::cout << tailAddr << std::endl;
+				}
+			}*/
+			stack.clear();
+			stack.push_back(tailAddr);
+		} else {
+			/*bool contains = false;
+			for(UINT64 j=0;j<loopList.size();j++) {
+				if(loopList.at(j).tailAddr == tailAddr) {
+					loopList.at(j).iter++;
+					loopList.at(j).entries++;
+					contains = true;
+					break;
+				}
+			}*/
+			curLoopIter=1;
+			inLoop = true;
+			UINT32 ind = std::distance(stack.begin(),itr);
+			/*if(!contains) {
+				LoopStream elem;
+				elem.entries++;
+				elem.iter = 1;
+				elem.tailAddr = tailAddr;
+				loopList.push_back(elem);
+			}*/
+			while(ind < stack.size()) {
+				validBbls.push_back(stack.at(ind));
+				ind++;
+			}
+			stack.clear();
+			stack.push_back(tailAddr);
+		}
+		/*int ind = std::distance(stack.begin(),itr);
 		bool foundLoopAlready = false;
 		//std::cout << tailAddr << std::endl;
 		for(UINT32 i=0;i<loopList.size();i++) {
@@ -82,14 +130,28 @@ VOID loopDetection(UINT64 tailAddr) {
 				foundLoopAlready = true;
 				if(loopList.at(i).prevAddr == stack.at(stack.size() - 1)) {
 					loopList.at(i).entryIterList[loopList.at(i).entryIterList.size()-1]++;//last entry should have an iter increase
-                                        //std::cout << loopList.at(i).entryIterList.at(loopList.at(i).entryIterList.size()-1) << std::endl;
+                                       	//std::cout << loopList.at(i).entryIterList.at(loopList.at(i).entryIterList.size()-1) << std::endl;
 				} else {
+					if(loopList.at(i).entryIterList.size() == loopList.at(i).entryIterList.capacity()) {
+						loopList.at(i).entryIterList.reserve(loopList.at(i).entryIterList.capacity() * 2); 	
+					}
 					loopList.at(i).entryIterList[loopList.at(i).entryIterList.size()]++;
 				}
 			}		
 		}
 		if(!foundLoopAlready) {
+			inLoop = true;
 			LoopStream elem;
+			elem.iterBblList[0].push_back(NULL);
+			while(ind < stack.size()) {
+				elem.iterBblList.reserve(10);
+				elem.iterBBlList[1].push_back(stack.at(ind));
+				validBbl.push_back(stack.at(ind));
+				ind++;
+			}
+			stack.clear();
+			stack.push_back(tailAddr);
+					
 			elem.tailAddr = tailAddr;
 			elem.entryIterList.reserve(10);
 			elem.entryIterList.push_back(0);
@@ -97,9 +159,38 @@ VOID loopDetection(UINT64 tailAddr) {
                         //std::cout << elem.entryIterList.at(1) << std::endl;
 			elem.prevAddr = stack.at(stack.size()-1);
 			loopList.push_back(elem);
-		}
+		}*/
 	} else {
-		stack.push_back(tailAddr);
+		if(inLoop) {
+			std::vector<UINT64>::iterator itrTwo = std::find(validBbls.begin(), validBbls.end(), tailAddr);
+			if(itrTwo != validBbls.end()) {
+				stack.push_back(tailAddr);
+			} else {
+				bool contains = false;
+				for(UINT64 j=0;j<loopList.size();j++) {
+					std::cout << curLoopIter << std::endl;
+					if(loopList.at(j).tailAddr == tailAddr && loopList.at(j).iter == curLoopIter) {
+					loopList.at(j).entries++;
+					contains = true;
+					break;
+					}
+				}
+				if(!contains) {
+					LoopStream elem;
+					elem.entries++;
+					elem.iter = curLoopIter;
+					elem.tailAddr = stack.at(0);
+					loopList.push_back(elem);
+				}
+				
+				inLoop = false;
+				validBbls.clear();
+				stack.clear();
+				stack.push_back(tailAddr);	
+		       	}
+		} else {	
+			stack.push_back(tailAddr);
+		}
 	}
 }
 
@@ -190,9 +281,14 @@ KNOB<std::string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
 {
-    OutFile << "Total number of Loops:" << loopList.size() << std::endl;
-    OutFile << "Total number of entires in 1st loop: " << loopList.at(0).entryIterList.size()-1 << std::endl;
-    OutFile << "Total number of iterations in first loop: " <<  loopList.at(0).entryIterList.at(1) << std::endl;
+   
+	OutFile << "Total number of Vectorizable Loops:" << loopList.size() << std::endl;
+    for(UINT32 i=0;i<loopList.size();i++) {
+ 	UINT32 totalIters = loopList.at(i).iter + loopList.at(i).entries; 
+	OutFile << "Total number of iteration for loop " << i << ": "<< totalIters << std::endl;
+	OutFile << "Total number of entries for loop " << i << ": "<<  loopList.at(i).entries << std::endl;
+	OutFile << "Iterations/entry for loop " << i << ": "<<  totalIters/loopList.at(i).entries << std::endl;
+    }
 }
 
 
