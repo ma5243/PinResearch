@@ -20,9 +20,9 @@ int main(int argc, char *argv[]) {
 
     loop(size_t, i, 0, count,
         if(check) {
-          loop(size_t, j, 0, count2 - count, 
+          loop(size_t, j, 0, count2, 
             if(check2 && i == j) {
-	      continue;
+	      x*=2;
             }
             x += i * j;
           )					
