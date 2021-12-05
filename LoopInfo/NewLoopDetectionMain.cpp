@@ -9,27 +9,22 @@
 //#define START 0x4005a6
 //#define END 0x40062f
 
-#define START 0x4004b0
-#define END 0x40050e
+#define START 0x4005a6
+#define END 0x40064c
 
 std::ofstream OutFile;
 
 class LoopStream {
     public:
-      std::vector<UINT32> entryIterList;
+      //std::vector<UINT32> entryIterList;
       //std::vector<std::vector<UINT64>> iterBblList;
       //entryIterList.assign(10,0);
       UINT64 iter = 0;      
       UINT64 tailAddr;
       UINT64 prevAddr=0;
       UINT64 entries=0;
-      UINT64 numIns=0;      
-      
-    
-      //UINT64 totalIns = 0;
-      //UINT64 totalLoads = 0;
-      //UINT64 totalCalls = 0;
-      //UINT64 totalArithmeticIns = 0;
+      UINT64 numIns=0;
+      std::vector<UINT64> bbls;          
 };
 
 // Map from endAddr to startaddr
@@ -85,69 +80,49 @@ VOID loopDetection(UINT64 tailAddr,UINT32 numIns) {
 	std::vector<UINT64>::iterator itr = std::find(stack.begin(), stack.end(), tailAddr);
 	//std::cout << tailAddr << std::endl;
 	if(itr != stack.end()) { //if already on the stack 
-		if(inLoop) {
+		if(inLoop) { //If already in a loop and the bbl is on the stack, update statistics
 			curLoopIter++;
 			curLoopNumInsts += numIns;
-			/*for(UINT32 i=0;i<loopList.size();i++) {
-				if(loopList.at(i).tailAddr == tailAddr) {
-					loopList.at(i).iter++;
-					//std::cout << tailAddr << std::endl;
-				}
-			}*/
 			stack.clear();
 			stack.push_back(tailAddr);
-		} else {
-			/*bool contains = false;
-			for(UINT64 j=0;j<loopList.size();j++) {
-				if(loopList.at(j).tailAddr == tailAddr) {
-					loopList.at(j).iter++;
-					loopList.at(j).entries++;
-					contains = true;
-					break;
-				}
-			}*/
+		} else { //If not already in loop, that means we found a loop
 			curLoopIter=1;
 			curLoopNumInsts += numIns;
 			inLoop = true;
 			UINT32 ind = std::distance(stack.begin(),itr);
-			/*if(!contains) {
-				LoopStream elem;
-				elem.entries++;
-				elem.iter = 1;
-				elem.tailAddr = tailAddr;
-				loopList.push_back(elem);
-			}*/
 			while(ind < stack.size()) {
 				validBbls.push_back(stack.at(ind));
 				ind++;
 			}
 			stack.clear();
 			stack.push_back(tailAddr);
-			}
-	} else {
-		if(inLoop) {
+		}
+	} else { //if not already on the stack
+		if(inLoop) { //if in a loop and current bbl not on the stack
 			std::vector<UINT64>::iterator itrTwo = std::find(validBbls.begin(), validBbls.end(), tailAddr);
-			if(itrTwo != validBbls.end()) {
+			if(itrTwo != validBbls.end()) { //if the current bbl is on the valid bbl list
 				stack.push_back(tailAddr);
 				curLoopNumInsts += numIns;
-			} else {
+			} else { //if its not on valid bbl list, end of loop object
 				bool contains = false;
 				curLoopIter++;
 				for(UINT64 j=0;j<loopList.size();j++) {
 					//std::cout << curLoopIter << std::endl;
 					//std::cout << tailAddr << std::endl;
-					if(loopList.at(j).tailAddr == stack.at(stack.size()-1) && loopList.at(j).iter == curLoopIter) {
+					if(loopList.at(j).tailAddr == stack.at(stack.size()-1) && loopList.at(j).iter == curLoopIter && loopList.at(j).bbls == validBbls) {
 					loopList.at(j).entries++;
 					contains = true;
 					break;
 					}
 				}
-				if(!contains) {
+				if(!contains) {//create loop object on the end if doesn't already exist and set statistics
 					LoopStream elem;
 					elem.entries++;
 					elem.iter = curLoopIter;
 					elem.tailAddr = stack.at(0);
+					//std::cout << tailAddr << std::endl;
 					elem.numIns = curLoopNumInsts;
+					elem.bbls = validBbls;
 					loopList.push_back(elem);
 				}
 				
@@ -156,56 +131,12 @@ VOID loopDetection(UINT64 tailAddr,UINT32 numIns) {
 				stack.clear();
 				stack.push_back(tailAddr);	
 		       	}
-		} else {	
+		} else { //if not in a loop currently, this is just another bbl so push to stack	
 			stack.push_back(tailAddr);
 		}
 	}
 }
 
-/*VOID processBbl(UINT64 startAddr, UINT64 endAddr, BBL *bbl)
-{
-    if (std::find(stack.begin(), stack.end(), endAddr) == stack.end()) {
-        stack.push_back(endAddr);
-    } else {
-        while(stack.back() != endAddr){
-            stack.pop_back();
-        }
-        if (loops.find(endAddr) == loops.end()){
-            loops[endAddr] = 1;
-        } else { 
-            loops[endAddr] ++;
-        }
-    }
-        
-//    OutFile << startAddr << " " << endAddr << std::endl;
-}
-
-VOID processDbbl(UINT64 startAddr, UINT64 endAddr, BBL *dbbl)
-{
-    if (bbls.find(endAddr) == bbls.end()) {
-        bbls[endAddr] = startAddr;
-    } else if (bbls[endAddr] < startAddr) {
-        bbls[endAddr] = startAddr;
-    } else if (bbls[endAddr] > startAddr) {
-        // Split dbbls
-        //UINT64 prev; //Maybe the type should be ADDRINT
-        //for(INS ins = std::cout << INS_Address(BBL_InsHead(*dbbl)) << std::endl;//; ins != BBL_InsTail(*dbbl); ins=INS_Next(ins)) {
-		//    if(INS_Address(ins) == bbls[endAddr]) {
-		//	    break;
-		//    }
-        //    std::cout << INS_Address(ins); 
-//	    }
-	    //bbls[prev] = startAddr;
-	    //processBbl(startAddr,prev,dbbl);
-        // prev = address of ins just before bbls[endAddr]
-        // bbls[prev] = startAddr
-        // processBbl(startAdr, prev);
-    } else {
-        // all good
-    }
-    UINT64 newStartAddr = bbls[endAddr];
-    processBbl(newStartAddr, endAddr, dbbl);
-}*/
 
 
 VOID Trace(TRACE trace, VOID *v)
@@ -217,28 +148,20 @@ VOID Trace(TRACE trace, VOID *v)
 	if(INS_Address(BBL_InsHead(bbl)) >= START && INS_Address(BBL_InsTail(bbl)) <= END) {
 		// Insert a call to docount before every bbl, passing the tail address
         	BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)loopDetection, IARG_ADDRINT, INS_Address(BBL_InsTail(bbl)),IARG_UINT32, BBL_NumIns(bbl),IARG_END);
-	}
+	/*std::stringstream ss;
+	ss<< std::hex << INS_Address(BBL_InsHead(bbl));
+	std::string res ( ss.str() );
+	std::cout << res << std::endl;	
 	
+	std::stringstream sss;
+	sss<< std::hex << INS_Address(BBL_InsTail(bbl));
+	std::string resTwo ( sss.str() );
+	std::cout << resTwo << std::endl; */
 	
 
-	/*if(basicBlocks.top() == bbl) {
-		//add to the loops map
-	
-		
-		//do instruction accounting 
-		for(INS ins = BBL_InsHead(bbl); true; ins=INS_Next(ins)) {
-			if(ins == BBL_InsTail(bbl)) {
-				doInstructionAccounting(ins, true);
-				break;
-			}
-			doInstructionAccounting(ins,false);
-		}
-		//remove the basic block
-		basicBlocks.pop();		
-	} else {
-		//if basic block not on top, just add it to the stack
-		basicBlocks.push(bbl);
-	}*/
+	//std::cout << INS_Address(BBL_InsHead(bbl)) << std::endl;
+	//std::cout << INS_Address(BBL_InsTail(bbl)) << std::endl;
+	}
     }
 }
 
