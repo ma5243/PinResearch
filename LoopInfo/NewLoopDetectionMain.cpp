@@ -34,6 +34,7 @@ std::vector<UINT64> stack;
 //std::unordered_map<UINT64, UINT64> loops;
 
 std::vector<UINT64> validBbls;
+std::vector<UINT64> validBblsIter;
 bool inLoop = false;
 
 std::vector<LoopStream> loopList;
@@ -74,17 +75,40 @@ INT32 Usage()
     std::cerr << "Usage: Not Implemented" << std::endl;
     return -1;
 }
-
+//Want a similar structure to validBBL that gets created at the beginning of an iteration and gets destroyed at the end of an 
+//iteration
+//At the end of an iteration, if the current list is different than the validBBL list, then we create a new LoopStream object
+//and set the validBBL to the new iteration bbl list. Reset the iteration/instruction counters
 VOID loopDetection(UINT64 tailAddr,UINT32 numIns) {
-//	std::cout << tailAddr << std::endl;
 	std::vector<UINT64>::iterator itr = std::find(stack.begin(), stack.end(), tailAddr);
 	//std::cout << tailAddr << std::endl;
 	if(itr != stack.end()) { //if already on the stack 
 		if(inLoop) { //If already in a loop and the bbl is on the stack, update statistics
-			curLoopIter++;
-			curLoopNumInsts += numIns;
-			stack.clear();
-			stack.push_back(tailAddr);
+			if(validBblsIter != validBbls) {
+				//need to store the iteration that ran in each iteration and store those
+				//need a way to set instructions later 			
+
+				LoopStream elem;
+				elem.entries++;
+				elem.iter = curLoopIter;
+				elem.tailAddr = stack.at(0);
+				//std::cout << tailAddr << std::endl;
+				elem.numIns = curLoopNumInsts;
+				elem.bbls = validBbls;
+				loopList.push_back(elem);
+
+				curLoopIter = 1;
+				//Need a way to keep track of instructions in each iteration
+				validBbls = validBblsIter;
+				
+			} else {
+				curLoopIter++;
+				curLoopNumInsts += numIns;
+			}
+				stack.clear();
+				stack.push_back(tailAddr);
+				validBblsIter.clear();
+				validBblsIter.push_back(tailAddr);
 		} else { //If not already in loop, that means we found a loop
 			curLoopIter=1;
 			curLoopNumInsts += numIns;
@@ -94,11 +118,13 @@ VOID loopDetection(UINT64 tailAddr,UINT32 numIns) {
 				validBbls.push_back(stack.at(ind));
 				ind++;
 			}
+			validBblsIter.push_back(tailAddr);
 			stack.clear();
 			stack.push_back(tailAddr);
 		}
 	} else { //if not already on the stack
 		if(inLoop) { //if in a loop and current bbl not on the stack
+			validBblsIter.push_back(tailAddr);
 			std::vector<UINT64>::iterator itrTwo = std::find(validBbls.begin(), validBbls.end(), tailAddr);
 			if(itrTwo != validBbls.end()) { //if the current bbl is on the valid bbl list
 				stack.push_back(tailAddr);
@@ -126,6 +152,7 @@ VOID loopDetection(UINT64 tailAddr,UINT32 numIns) {
 					loopList.push_back(elem);
 				}
 				
+				curLoopNumInsts = 0;
 				inLoop = false;
 				validBbls.clear();
 				stack.clear();
@@ -178,7 +205,7 @@ VOID Fini(INT32 code, VOID *v)
  	//UINT32 totalIters = loopList.at(i).iter + loopList.at(i).entries; 
 	OutFile << "Number of iterations for loop " << i << ": "<< loopList.at(i).iter << std::endl;
 	OutFile << "Total number of entries for loop " << i << ": "<<  loopList.at(i).entries << std::endl;
-	OutFile << "Instructions/iteration for loop " << i << ": " << loopList.at(i).numIns / (loopList.at(i).iter - 1) << std::endl;
+	//OutFile << "Instructions/iteration for loop " << i << ": " << loopList.at(i).numIns / (loopList.at(i).iter - 1) << std::endl;
 	OutFile << "" << std::endl;
     }
 }
