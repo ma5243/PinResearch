@@ -9,8 +9,8 @@
 //#define START 0x4005a6
 //#define END 0x40062f
 
-#define START 0x4005a6
-#define END 0x40064c
+#define START 0x4007ae
+#define END 0x400885
 
 std::ofstream OutFile;
 
@@ -70,6 +70,8 @@ void doInstructionAccouting(INS ins, bool isLoopTail) {
 	}
 }
 
+UINT32 i = 0;
+
 INT32 Usage()
 {
     std::cerr << "Usage: Not Implemented" << std::endl;
@@ -83,11 +85,8 @@ VOID loopDetection(UINT64 tailAddr,UINT32 numIns) {
 	std::vector<UINT64>::iterator itr = std::find(stack.begin(), stack.end(), tailAddr);
 	//std::cout << tailAddr << std::endl;
 	if(itr != stack.end()) { //if already on the stack 
-		if(inLoop) { //If already in a loop and the bbl is on the stack, update statistics
+		if(inLoop) { //If already in a loop and the bbl is on the stack, update statistics (this is when at the end of an iteration)
 			if(validBblsIter != validBbls) {
-				//need to store the iteration that ran in each iteration and store those
-				//need a way to set instructions later 			
-
 				LoopStream elem;
 				elem.entries++;
 				elem.iter = curLoopIter;
@@ -99,25 +98,36 @@ VOID loopDetection(UINT64 tailAddr,UINT32 numIns) {
 
 				curLoopIter = 1;
 				//Need a way to keep track of instructions in each iteration
-				validBbls = validBblsIter;
+				//validBbls = validBblsIter;
+							
+				/*while(i < stack.size()) {
+					std::cout << validBblsIter.at(i) << std::endl;
+					std::cout << stack.at(i) << std::endl;
+					std::cout << " " << std::endl;
+					i++;
+				}*/
 				
+				//std::cout << "end" << std::endl;
+				validBbls = validBblsIter;
+
 			} else {
 				curLoopIter++;
-				curLoopNumInsts += numIns;
 			}
+				curLoopNumInsts = numIns;
 				stack.clear();
 				stack.push_back(tailAddr);
 				validBblsIter.clear();
 				validBblsIter.push_back(tailAddr);
 		} else { //If not already in loop, that means we found a loop
 			curLoopIter=1;
-			curLoopNumInsts += numIns;
+			curLoopNumInsts = numIns;
 			inLoop = true;
 			UINT32 ind = std::distance(stack.begin(),itr);
 			while(ind < stack.size()) {
 				validBbls.push_back(stack.at(ind));
 				ind++;
 			}
+			validBblsIter.clear();
 			validBblsIter.push_back(tailAddr);
 			stack.clear();
 			stack.push_back(tailAddr);
@@ -131,7 +141,7 @@ VOID loopDetection(UINT64 tailAddr,UINT32 numIns) {
 				curLoopNumInsts += numIns;
 			} else { //if its not on valid bbl list, end of loop object
 				bool contains = false;
-				curLoopIter++;
+				//curLoopIter++;
 				for(UINT64 j=0;j<loopList.size();j++) {
 					//std::cout << curLoopIter << std::endl;
 					//std::cout << tailAddr << std::endl;
@@ -201,11 +211,12 @@ VOID Fini(INT32 code, VOID *v)
 {
    
 	OutFile << "Total number of Vectorizable Loops: " << loopList.size() << std::endl;
+	OutFile << "" << std::endl;
     for(UINT32 i=0;i<loopList.size();i++) {
  	//UINT32 totalIters = loopList.at(i).iter + loopList.at(i).entries; 
 	OutFile << "Number of iterations for loop " << i << ": "<< loopList.at(i).iter << std::endl;
 	OutFile << "Total number of entries for loop " << i << ": "<<  loopList.at(i).entries << std::endl;
-	//OutFile << "Instructions/iteration for loop " << i << ": " << loopList.at(i).numIns / (loopList.at(i).iter - 1) << std::endl;
+	OutFile << "Instructions/iteration for loop " << i << ": " << loopList.at(i).numIns  << std::endl;
 	OutFile << "" << std::endl;
     }
 }
