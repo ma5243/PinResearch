@@ -7,8 +7,8 @@
 #include <sstream>
 #include <set>
 
-#define START 0x400707
-#define END 0x400877
+#define START 0x400607
+#define END 0x40073d
 
 std::ifstream instrFile;
 std::ofstream OutFile;
@@ -67,16 +67,27 @@ VOID Application_Start(VOID *v)
     }
 }*/
 
+
+bool containsInstruction(std::vector<INS> vec,INS in) {
+    for(uint j=0;j<vec.size();j++) {
+        if(INS_Address(vec.at(j)) == INS_Address(in)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void doLiveInLiveOutAnalysis(LoopStream &elem)
 {
     std::set<REG> liveIns;
     std::set<REG> liveOuts;
 
     int k = instr.size()-1;
+    //std::cout << k << std::endl;
 
     for (; k >= 0; k--)
     {
-        //std::cout << std::hex << INS_Address(instr.at(k)) << std::endl;
+        std::cout << k << " " << std::hex << INS_Address(instr.at(k)) << std::endl;
         int numOperands = INS_OperandCount(instr.at(k));
         for (int j = 0; j < numOperands; j++)
         {
@@ -87,19 +98,22 @@ void doLiveInLiveOutAnalysis(LoopStream &elem)
                 { // corner case of a = a+b
                     liveIns.insert(rgstr);
                     liveOuts.insert(rgstr);
-                    std::cout << std::hex << INS_Address(instr.at(k)) << std::endl;
+                    //std::cout << "Added to both: " << "Operand: " << k  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << std::endl;
                 }
                 else if (INS_OperandReadOnly(instr.at(k), j))
                 {
                     liveIns.insert(rgstr);
+                    //std::cout << "Added to Live Ins: " << "Operand: " << k  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << std::endl;
                 }
                 else if (INS_OperandWrittenOnly(instr.at(k), j))
                 {
                     std::set<REG>::iterator iter = liveIns.find(rgstr);
                     if(iter != liveIns.end()) {
                         liveIns.erase(iter);
+                        //std::cout << "Erased from Live Ins: " << "Operand: " << k  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << std::endl;
                     } 
                     liveOuts.insert(rgstr);
+                    //std::cout << "Added to Live Outs: " << "Operand: " << k  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << std::endl;
                 }
             }
         }
@@ -147,7 +161,10 @@ VOID Trace(TRACE trace, VOID *v)
                 elem.memoryWriteIns = mem_write_instr;
                 elem.dependency = false;
 
+                std::cout << "end\n";
                 doLiveInLiveOutAnalysis(elem);
+                instr.clear();
+                
                 loopList.push_back(elem);
                 i++;
 
@@ -192,7 +209,14 @@ VOID Trace(TRACE trace, VOID *v)
                         arithmetic_instr++;
                     }
                     //std::cout << std::hex << INS_Address(ins) << std::endl;
-                    instr.push_back(ins);
+                    
+                    //if(std::find(instr.begin(), instr.end(), ins) == instr.end()) {
+                    if(!containsInstruction(instr,ins)) {
+                        std::cout << std::hex << INS_Address(ins) << std::endl;
+                        instr.push_back(ins);
+                    }    
+                   
+                    //}
                 }
                 i++;
             }

@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <stack>
 
-#define START 0x400707
-#define END 0x400877
+#define START 0x400607
+#define END 0x40073d
 
 std::ofstream OutFile;
 std::ofstream bblTracker;
