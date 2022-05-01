@@ -7,7 +7,7 @@
 #include <sstream>
 #include <set>
 #include <list>
-#include "cvp.h"
+//#include "cvp.h"
 
 #define START 0x400607
 #define END 0x40073d
@@ -28,6 +28,7 @@ public:
 static std::vector<LoopStream> loopList;
 static std::vector<std::string> addr;
 static std::vector<INS> instr;
+//static std::set<INS> predictInstructions;
 // static std::list<INS> instr;
 
 UINT64 arithmetic_instr = 0;
@@ -50,7 +51,7 @@ VOID Application_Start(VOID *v)
         addr.push_back(myline);
     }
     addr.pop_back();
-    beginPredictor(0,NULL);
+    //beginPredictor(0,NULL);
 }
 
 VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
@@ -58,8 +59,8 @@ VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
     std::set<REG> liveIns;
     std::set<REG> liveOuts;
 
-    std::vector<int> instructionNumsIn;
-    std::vector<int> instructionNumsOut;
+    //std::vector<int> instructionNumsIn;
+    //std::vector<int> instructionNumsOut;
 
     int k = vec.size() - 1;
     // std::cout << k << std::endl;
@@ -68,7 +69,7 @@ VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
     {
         INS ins = vec.at(k);
         std::cout << std::hex << INS_Address(ins) << std::endl;
-        bool erased = false;
+        //bool erased = false;
         // vec.pop_back();
         // std::cout << k << " " << std::hex << INS_Address(vec.at(k)) << std::endl;
         int numOperands = INS_OperandCount(ins);
@@ -83,29 +84,30 @@ VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
                         liveIns.insert(rgstr);
                         liveOuts.insert(rgstr);
 
-                        instructionNumsIn.push_back(k);
-                        instructionNumsOut.push_back(k);
+                        //instructionNumsIn.push_back(k);
+                        //instructionNumsOut.push_back(k);
                         std::cout << "Added to both: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
                     }
                     else if (INS_OperandReadOnly(ins, j))
                     {
                         liveIns.insert(rgstr);
+                        //instructionNumsIn.Push_back(k);
                         std::cout << "Added to Live Ins: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
                     }
                     else if (INS_OperandWrittenOnly(ins, j))
                     {
                         std::set<REG>::iterator iter = liveIns.find(rgstr);
+                        //std::vector<int>::iterator iterTwo = instructionNumsIn.find(k);
                         if (iter != liveIns.end())
                         {
                             liveIns.erase(iter);
-                            erased = true;
+                            //instructionNumsIn.erase(iterTwo);
+                            //erased = true;
                             std::cout << "Erased from Live Ins: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
                         }
-                        if(!erased) {
-                            liveOuts.insert(rgstr);
-                            std::cout << "Added to Live Outs: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
-                            erased = false;
-                        }
+                        liveOuts.insert(rgstr);
+                        //instructionNumsOut.insert(k);
+                        std::cout << "Added to Live Outs: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
                     }
                 }
             }
@@ -122,6 +124,12 @@ VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
             break;
         }
     }
+    /*for(int check: instructionNumsIn) {
+        std::vector<int>::iterator iter = instructionNumsOut.find(check);
+        if(iter != instructionNumsOut.end()) {
+            predictInstructions.insert(vec.at(k));
+        }
+    }*/
     // std::cout << "test\n";
 }
 
@@ -142,6 +150,13 @@ VOID Trace(TRACE trace, VOID *v)
             {
                 break;
             }
+            //Current solution is to have the list of instructions ready and add seperate block 
+            //here to check if those instructions need to be predicted and if they do then predict
+            //However, this requires instrumenting each instruction which would be really inefficient
+            //The other way is to somehow figure out when the last iteration of the loop is being run 
+            //and do my i++ in the other analsyis implementation accordingly instead of after the 1st
+            //iteration like it currently does. However, not sure how to refactor in such a manner. 
+
             // std::cout << temp << std::endl;
             // std::cout << addr.at(i) << std::endl;
             if (addr.at(i) != "end")
@@ -189,13 +204,8 @@ VOID Trace(TRACE trace, VOID *v)
                             // std::cout << "Arithmetic Instruction: " << std::hex << INS_Address(ins) << std::endl;
                             arithmetic_instr++;
                         }
-                        // std::cout << std::hex << INS_Address(ins) << std::endl;
-                        //if(!(INS_Opcode(ins) == XED_ICLASS_PUSH)) { //the problem is that some parts of the BBL 
-                        //are only run the first time so not really part of the loop Iike all the statements before
-                        //cmpl. However, they're included in the live in live out analysis and break it. Could hardcode,
-                        //but not sure if thats the best solution. This is here to serve as a temporary hardcode to test
+                        
                             instr.push_back(ins);
-                        //}
 
                         /*std::cout << "Current size: " << instr.size() << std::endl;
                         for (uint val = 0; val < instr.size(); val++)
@@ -227,7 +237,7 @@ VOID Trace(TRACE trace, VOID *v)
                         {
                         std::cout << std::hex << INS_Address(instr.at(val)) << std::endl;
                         }*/
-                        doLiveInLiveOutAnalysis(instr, elem);
+                        doLiveInLiveOutAnalysis(instr, elem); //this also gives me the set of instruction I need to run predictions on 
                         instr.clear();
 
                         loopList.push_back(elem);
@@ -265,7 +275,7 @@ VOID Fini(INT32 code, VOID *v)
             OutFile << "" << std::endl;
         }
     }
-    endPredictor();
+    //endPredictor();
 }
 
 int main(int argc, char *argv[])
