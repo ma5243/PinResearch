@@ -9,8 +9,8 @@
 #include <list>
 //#include "cvp.h"
 
-#define START 0x400607
-#define END 0x40073d
+//#define START 0x400607
+//#define END 0x40073d
 
 std::ifstream instrFile;
 std::ofstream OutFile;
@@ -22,7 +22,7 @@ public:
     UINT64 memoryReadIns;
     UINT64 controlFlowIns;
     UINT64 memoryWriteIns;
-    BOOL dependency;
+    UINT64 dependency;
 };
 
 static std::vector<LoopStream> loopList;
@@ -41,12 +41,20 @@ UINT64 tailAddrInt; //convert addresses from strings to ints
 UINT64 headAddrInt;
 UINT64 numSeen = 0;
 
+KNOB<std::string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
+                                 "o", "bblcount.out", "specify output file name");
+
+KNOB<std::string> KnobInputFile(KNOB_MODE_WRITEONCE, "pintool",
+                                 "i", "Instructions.txt", "specify input file name");
+
+
 VOID Application_Start(VOID *v)
 {
-    instrFile.open("Instructions.txt");
+    instrFile.open(KnobInputFile.Value().c_str());
     std::string myline;
     while (instrFile)
     {
+        //std::cout << myline << std::endl;
         std::getline(instrFile, myline);
         addr.push_back(myline);
     }
@@ -63,12 +71,12 @@ VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
     //std::vector<int> instructionNumsOut;
 
     int k = vec.size() - 1;
-    // std::cout << k << std::endl;
+    //std::cout << k << std::endl;
 
     for (; k >= 0; k--)
     {
         INS ins = vec.at(k);
-        std::cout << std::hex << INS_Address(ins) << std::endl;
+        //std::cout << std::hex << INS_Address(ins) << std::endl;
         //bool erased = false;
         // vec.pop_back();
         // std::cout << k << " " << std::hex << INS_Address(vec.at(k)) << std::endl;
@@ -86,13 +94,13 @@ VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
 
                         //instructionNumsIn.push_back(k);
                         //instructionNumsOut.push_back(k);
-                        std::cout << "Added to both: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
+          //              std::cout << "Added to both: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
                     }
                     else if (INS_OperandReadOnly(ins, j))
                     {
                         liveIns.insert(rgstr);
                         //instructionNumsIn.Push_back(k);
-                        std::cout << "Added to Live Ins: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
+            //            std::cout << "Added to Live Ins: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
                     }
                     else if (INS_OperandWrittenOnly(ins, j))
                     {
@@ -103,11 +111,11 @@ VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
                             liveIns.erase(iter);
                             //instructionNumsIn.erase(iterTwo);
                             //erased = true;
-                            std::cout << "Erased from Live Ins: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
+                           // std::cout << "Erased from Live Ins: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
                         }
                         liveOuts.insert(rgstr);
                         //instructionNumsOut.insert(k);
-                        std::cout << "Added to Live Outs: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
+                        //std::cout << "Added to Live Outs: " << "Operand: " << j  << " Instruction: " << std::hex << INS_Address(instr.at(k)) << " Register: " << rgstr << std::endl;
                     }
                 }
             }
@@ -119,9 +127,9 @@ VOID doLiveInLiveOutAnalysis(std::vector<INS> vec, LoopStream &elem)
         std::set<REG>::iterator iter = liveOuts.find(reg);
         if (iter != liveOuts.end())
         {
-            std::cout << "Common: " << reg << std::endl;
-            elem.dependency = true;
-            break;
+            //std::cout << "Common: " << reg << std::endl;
+            elem.dependency ++;
+            //break;
         }
     }
     /*for(int check: instructionNumsIn) {
@@ -144,8 +152,12 @@ VOID Trace(TRACE trace, VOID *v)
     //  Visit every basic block  in the trace
     for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
     {
-        if (INS_Address(BBL_InsHead(bbl)) >= START && INS_Address(BBL_InsTail(bbl)) <= END)
-        {
+/*if (INS_Address(BBL_InsTail(bbl)) < 0x7fffffff){
+                std::cout << INS_Address(BBL_InsTail(bbl)) << " " << INS_Address(BBL_InsHead(bbl)) <<std::endl;
+            }
+            continue;*/
+       // if (INS_Address(BBL_InsHead(bbl)) >= START && INS_Address(BBL_InsTail(bbl)) <= END)
+       // {
             if (i == addr.size())
             {
                 break;
@@ -159,6 +171,17 @@ VOID Trace(TRACE trace, VOID *v)
 
             // std::cout << temp << std::endl;
             // std::cout << addr.at(i) << std::endl;
+            /*std::stringstream temp(addr.at(i));
+            temp >> tailAddrInt;
+            while (tailAddrInt > 0x7fffffff){
+                while (addr.at(i) != "end"){
+                    i ++;
+                }
+                i++;
+                std::stringstream temp(addr.at(i));
+                temp >> tailAddrInt;
+            }*/
+            
             if (addr.at(i) != "end")
             {
                 std::stringstream temp(addr.at(i));
@@ -166,7 +189,8 @@ VOID Trace(TRACE trace, VOID *v)
 
                 std::stringstream tempTwo(addr.at(i+1));
                 tempTwo >> headAddrInt;
-                //std::cout << "addr: " << addr.at(i) << std::endl;
+                //std::cout << "addr: " << addr.at(i+1) << " - " << addr.at(i) << std::endl;
+                //std::cout << "bbl: " << INS_Address(BBL_InsHead(bbl)) << " - " << INS_Address(BBL_InsTail(bbl)) <<std::endl;
                 if (tailAddrInt == INS_Address(BBL_InsTail(bbl)) && headAddrInt == INS_Address(BBL_InsHead(bbl)))
                 {
                     numSeen = 0;
@@ -225,7 +249,7 @@ VOID Trace(TRACE trace, VOID *v)
                         elem.controlFlowIns = control_flow_instr;
                         elem.memoryReadIns = mem_read_instr;
                         elem.memoryWriteIns = mem_write_instr;
-                        elem.dependency = false;
+                        elem.dependency = 0;
 
                         /*std::cout << "check start\n";
                         for (uint val = 0; val < instr.size(); val++)
@@ -249,25 +273,37 @@ VOID Trace(TRACE trace, VOID *v)
                         mem_write_instr = 0;
                     }
                 }
-            }
+           // }
         }
     }
 }
 
-KNOB<std::string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
-                                 "o", "bblcount.out", "specify output file name");
 
 // This function is called when the application exits
 VOID Fini(INT32 code, VOID *v)
 {
 
-    OutFile << "Total number of Vectorizable Loops: " << loopList.size() << std::endl;
+    OutFile << "Total number of Loops: " << loopList.size() << std::endl;
     OutFile << "" << std::endl;
     for (UINT32 i = 0; i < loopList.size(); i++)
     {
-        if (loopList.at(i).dependency == false)
+        if (loopList.at(i).dependency == 0)
         {
             // UINT32 totalIters = loopList.at(i).iter + loopList.at(i).entries;
+            OutFile << "Total number of arithmetic instructions for loop " << i << ": " << loopList.at(i).arithmeticIns << std::endl;
+            OutFile << "Total number of read memory instructions for loop " << i << ": " << loopList.at(i).memoryReadIns << std::endl;
+            OutFile << "Total number of write memory instructions for loop " << i << ": " << loopList.at(i).memoryWriteIns << std::endl;
+            OutFile << "Total number of control flow instructions for loop " << i << ": " << loopList.at(i).controlFlowIns << std::endl;
+            OutFile << "" << std::endl;
+        }
+    }
+    OutFile << "\nCould not vectorize:" << std::endl;
+    for (UINT32 i = 0; i < loopList.size(); i++)
+    {
+        if (loopList.at(i).dependency > 0)
+        {
+            // UINT32 totalIters = loopList.at(i).iter + loopList.at(i).entries;
+            OutFile << "Total number of dependencies " << i << ": " << loopList.at(i).dependency << std::endl;
             OutFile << "Total number of arithmetic instructions for loop " << i << ": " << loopList.at(i).arithmeticIns << std::endl;
             OutFile << "Total number of read memory instructions for loop " << i << ": " << loopList.at(i).memoryReadIns << std::endl;
             OutFile << "Total number of write memory instructions for loop " << i << ": " << loopList.at(i).memoryWriteIns << std::endl;

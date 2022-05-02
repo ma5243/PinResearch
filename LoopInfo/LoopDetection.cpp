@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <stack>
 
-#define START 0x400607
-#define END 0x40073d
+//#define START 0x400607
+//#define END 0x40073d
 
 std::ofstream OutFile;
 std::ofstream bblTracker;
@@ -191,11 +191,11 @@ VOID Trace(TRACE trace, VOID *v)
 	// Visit every basic block  in the trace
 	for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
 	{
-		if (INS_Address(BBL_InsHead(bbl)) >= START && INS_Address(BBL_InsTail(bbl)) <= END)
-		{
+		//if (INS_Address(BBL_InsHead(bbl)) >= START && INS_Address(BBL_InsTail(bbl)) <= END)
+		//{
 			// Insert a call to docount before every bbl, passing the tail address
 			BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)loopDetection, IARG_ADDRINT, INS_Address(BBL_InsTail(bbl)), IARG_ADDRINT, INS_Address(BBL_InsHead(bbl)), IARG_UINT32, BBL_NumIns(bbl), IARG_END);
-		}
+		//}
 	}
 }
 
